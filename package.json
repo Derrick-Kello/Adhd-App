@@ -1,6 +1,7 @@
 {
-  "name": "expo-zustand-starter",
+  "name": "funfocus-adhd-app",
   "version": "1.0.0",
+  "description": "FunFocus - An educational app designed to help children with ADHD improve focus and attention through engaging games and activities",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",

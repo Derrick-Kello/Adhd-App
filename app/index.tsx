@@ -33,7 +33,7 @@ export default function SplashScreen() {
 
   return (
     <LinearGradient
-      colors={['#FF6B6B', '#4ECDC4', '#45B7D1']}
+      colors={['#667eea', '#764ba2', '#4ECDC4']}
       style={styles.container}
     >
       <Animated.View
@@ -45,9 +45,12 @@ export default function SplashScreen() {
           }
         ]}
       >
-        <Text style={styles.logo}>🎮</Text>
+        <View style={styles.logoCircle}>
+          <Text style={styles.logo}>🧠</Text>
+        </View>
         <Text style={styles.title}>FunFocus</Text>
-        <Text style={styles.subtitle}>Adventures</Text>
+        <Text style={styles.subtitle}>Focus & Fun Adventures!</Text>
+        <Text style={styles.tagline}>Building superpowers, one game at a time ✨</Text>
       </Animated.View>
     </LinearGradient>
   );
@@ -61,25 +64,53 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  logoCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   logo: {
-    fontSize: 80,
-    marginBottom: 10,
+    fontSize: 60,
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
     color: 'white',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 5,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 24,
+    fontSize: 20,
     color: 'white',
-    fontWeight: '300',
+    fontWeight: '600',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  tagline: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });

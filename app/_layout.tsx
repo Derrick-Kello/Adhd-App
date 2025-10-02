@@ -34,6 +34,8 @@ export default function RootLayout() {
           <Stack.Screen name="games/matching" />
           <Stack.Screen name="games/tracing" />
           <Stack.Screen name="games/tapping" />
+          <Stack.Screen name="games/focus" />
+          <Stack.Screen name="games/breathing" />
           <Stack.Screen name="movement" />
           <Stack.Screen name="rewards" />
           <Stack.Screen name="parent" />

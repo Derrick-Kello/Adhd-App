@@ -146,7 +146,10 @@ export default function MatchingGame() {
         </View>
       </View>
 
-      <Buddy message="I'm Buddy! Tap two cards to find a matching pair." />
+      <Buddy message={!gameStarted ? "Hi! I'm Buddy! Tap cards to find matching pairs. Take your time and focus on one at a time!" : 
+        matchedPairs.length > 0 ? `Great job! You found ${matchedPairs.length} pairs! Keep going!` :
+        flippedCards.length === 1 ? "Good! Now find the matching card!" :
+        "You're doing amazing! Focus on remembering where you saw each picture!"} />
 
       <View style={styles.gameArea}>
         <View style={styles.cardsGrid}>

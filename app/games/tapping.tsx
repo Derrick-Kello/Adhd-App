@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Vibration } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '../../src/store/gameStore';
@@ -7,24 +7,33 @@ import { useGameStore } from '../../src/store/gameStore';
 const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3'];
 const COLOR_NAMES = ['red', 'teal', 'blue', 'green', 'yellow', 'pink'];
 
+type Target = {
+  id: number;
+  color: string;
+  colorIndex: number;
+  x: number;
+  y: number;
+};
+
 export default function TappingGame() {
   const { addStars, completeGame, difficulty } = useGameStore();
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [targetColor, setTargetColor] = useState(0);
   const [gameActive, setGameActive] = useState(false);
-  const [targets, setTargets] = useState([]);
-  const [animatedValues, setAnimatedValues] = useState({});
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [animatedValues, setAnimatedValues] = useState<Record<number, Animated.Value>>({});
+  const hasEndedRef = useRef(false);
 
   const gameSpeed = difficulty === 'easy' ? 2000 : difficulty === 'medium' ? 1500 : 1000;
 
   useEffect(() => {
-    if (gameActive && timeLeft > 0) {
+    if (!gameActive) return;
+    if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0) {
-      endGame();
     }
+    endGame();
   }, [timeLeft, gameActive]);
 
   useEffect(() => {
@@ -40,9 +49,12 @@ export default function TappingGame() {
     setGameActive(true);
     setTargets([]);
     setTargetColor(Math.floor(Math.random() * COLORS.length));
+    hasEndedRef.current = false;
   };
 
   const endGame = () => {
+    if (hasEndedRef.current) return;
+    hasEndedRef.current = true;
     setGameActive(false);
     const stars = Math.floor(score / 10) + 1;
     addStars(stars);
@@ -58,15 +70,13 @@ export default function TappingGame() {
 
   const spawnTarget = () => {
     const id = Date.now();
-    const isCorrect = Math.random() > 0.3; // 70% chance of correct color
-    const colorIndex = isCorrect ? targetColor : 
-      Math.floor(Math.random() * COLORS.length);
+    const shouldBeCorrect = Math.random() > 0.3; // 70% chance of correct color
+    const colorIndex = shouldBeCorrect ? targetColor : Math.floor(Math.random() * COLORS.length);
     
     const newTarget = {
       id,
       color: COLORS[colorIndex],
       colorIndex,
-      isCorrect,
       x: Math.random() * 250 + 50, // Random position
       y: Math.random() * 400 + 200,
     };
@@ -86,7 +96,7 @@ export default function TappingGame() {
     });
   };
 
-  const removeTarget = (targetId) => {
+  const removeTarget = (targetId: number) => {
     setTargets(prev => prev.filter(target => target.id !== targetId));
     setAnimatedValues(prev => {
       const newValues = { ...prev };
@@ -95,11 +105,14 @@ export default function TappingGame() {
     });
   };
 
-  const tapTarget = (target) => {
+  const tapTarget = (target: Target) => {
     const animValue = animatedValues[target.id];
     
-    if (target.isCorrect) {
+    const isCorrectNow = target.colorIndex === targetColor;
+    if (isCorrectNow) {
       setScore(score + 10);
+      // Success haptic feedback
+      Vibration.vibrate([0, 100, 50, 100]);
       // Success animation
       Animated.sequence([
         Animated.spring(animValue, { toValue: 1.5, useNativeDriver: true }),
@@ -110,6 +123,8 @@ export default function TappingGame() {
       setTargetColor(Math.floor(Math.random() * COLORS.length));
     } else {
       setScore(Math.max(0, score - 5));
+      // Error haptic feedback
+      Vibration.vibrate([0, 200]);
       // Error animation
       Animated.sequence([
         Animated.timing(animValue, { toValue: 0.5, duration: 100, useNativeDriver: true }),
@@ -165,7 +180,7 @@ export default function TappingGame() {
                     top: target.y,
                     backgroundColor: target.color,
                     transform: [
-                      { scale: animatedValues[target.id] || 0 }
+                      { scale: animatedValues[target.id] || new Animated.Value(0) }
                     ]
                   }
                 ]}
@@ -180,12 +195,13 @@ export default function TappingGame() {
         </View>
       )}
 
-      <View style={styles.mascotContainer}>
-        <Text style={styles.mascotText}>
-          {!gameActive ? "Get ready to test your reflexes! 🏃‍♂️" : 
-           score > 50 ? "You're on fire! 🔥" : "Keep tapping the right colors! 💪"}
-        </Text>
-      </View>
+      {!gameActive && (
+        <View style={styles.mascotContainer}>
+          <Text style={styles.mascotText}>
+            Get ready to test your reflexes! 🏃‍♂️
+          </Text>
+        </View>
+      )}
     </LinearGradient>
   );
 }
@@ -212,17 +228,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     color: 'white',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   stats: {
     alignItems: 'flex-end',
   },
   statText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   startScreen: {
     flex: 1,
@@ -231,18 +253,24 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   instructionTitle: {
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 20,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   instructionText: {
-    fontSize: 18,
+    fontSize: 22,
     color: 'white',
     textAlign: 'center',
     marginBottom: 30,
-    lineHeight: 24,
+    lineHeight: 28,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   colorPreview: {
     alignItems: 'center',
@@ -308,14 +336,16 @@ const styles = StyleSheet.create({
   },
   target: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   targetTouchable: {
     flex: 1,

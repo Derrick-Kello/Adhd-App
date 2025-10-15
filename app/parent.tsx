@@ -7,7 +7,7 @@ import type { Difficulty } from '../types/game';
 import Buddy from '../components/Buddy';
 
 export default function ParentScreen() {
-  const { stats, difficulty, setDifficulty, soundEnabled, toggleSound } = useGameStore();
+  const { stats, difficulty, setDifficulty, soundEnabled, toggleSound, focusSessions, totalFocusTime, currentMood } = useGameStore();
   const [showPinEntry, setShowPinEntry] = useState(true);
   const [pin, setPin] = useState('');
 
@@ -114,6 +114,14 @@ export default function ParentScreen() {
               <Text style={styles.statNumber}>{stats.badges.length}</Text>
               <Text style={styles.statLabel}>Badges Earned</Text>
             </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{focusSessions}</Text>
+              <Text style={styles.statLabel}>Focus Sessions</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{Math.floor(totalFocusTime / 60)}m</Text>
+              <Text style={styles.statLabel}>Focus Time</Text>
+            </View>
           </View>
         </View>
 
@@ -161,6 +169,32 @@ export default function ParentScreen() {
           </View>
         </View>
 
+        {/* Mood Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>😊 Mood Insights</Text>
+          <View style={styles.moodCard}>
+            <Text style={styles.moodTitle}>Current Mood</Text>
+            <View style={styles.moodDisplay}>
+              <Text style={styles.moodEmoji}>
+                {currentMood === 'happy' ? '😊' : 
+                 currentMood === 'calm' ? '😌' : 
+                 currentMood === 'frustrated' ? '😤' : 
+                 currentMood === 'excited' ? '🤩' : '😴'}
+              </Text>
+              <Text style={styles.moodLabel}>
+                {currentMood.charAt(0).toUpperCase() + currentMood.slice(1)}
+              </Text>
+            </View>
+            <Text style={styles.moodDescription}>
+              {currentMood === 'happy' && 'Your child is feeling great and positive!'}
+              {currentMood === 'calm' && 'Your child is peaceful and relaxed.'}
+              {currentMood === 'frustrated' && 'Your child might need some support or a break.'}
+              {currentMood === 'excited' && 'Your child is full of energy and enthusiasm!'}
+              {currentMood === 'tired' && 'Your child might need some rest or gentle activities.'}
+            </Text>
+          </View>
+        </View>
+
         {/* Tips for Parents */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>💡 Tips for Parents</Text>
@@ -180,6 +214,12 @@ export default function ParentScreen() {
             <Text style={styles.tipTitle}>🏆 Positive Reinforcement</Text>
             <Text style={styles.tipText}>
               Celebrate small wins! Every star earned is progress worth acknowledging.
+            </Text>
+          </View>
+          <View style={styles.tipCard}>
+            <Text style={styles.tipTitle}>😊 Mood Awareness</Text>
+            <Text style={styles.tipText}>
+              Check your child's mood regularly and adjust activities accordingly. Frustrated? Try breathing exercises. Excited? Channel that energy!
             </Text>
           </View>
         </View>
@@ -423,5 +463,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#667eea',
+  },
+  moodCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  moodTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  moodDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  moodEmoji: {
+    fontSize: 40,
+    marginRight: 15,
+  },
+  moodLabel: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#667eea',
+  },
+  moodDescription: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

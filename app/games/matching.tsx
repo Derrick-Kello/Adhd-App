@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert, Vibration } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '../../src/store/gameStore';
@@ -48,6 +48,8 @@ export default function MatchingGame() {
     if (flippedCards.includes(cardId)) return;
     if (matchedPairs.some(pair => pair.includes(cardId))) return;
 
+    Vibration.vibrate([0, 50]); // Card flip haptic feedback
+
     // Animate card flip
     Animated.spring(flipAnimations[cardId], {
       toValue: 1,
@@ -65,6 +67,7 @@ export default function MatchingGame() {
 
       if (firstCard.emoji === secondCard.emoji) {
         // Match found!
+        Vibration.vibrate([0, 100, 50, 100]); // Success haptic feedback
         setTimeout(() => {
           setMatchedPairs([...matchedPairs, newFlippedCards]);
           setFlippedCards([]);
@@ -85,6 +88,7 @@ export default function MatchingGame() {
         }, 500);
       } else {
         // No match, flip back
+        Vibration.vibrate([0, 200]); // Error haptic feedback
         setTimeout(() => {
           newFlippedCards.forEach(id => {
             Animated.spring(flipAnimations[id], {
@@ -146,7 +150,11 @@ export default function MatchingGame() {
         </View>
       </View>
 
-      <Buddy message="I'm Buddy! Tap two cards to find a matching pair." />
+      <Buddy 
+        message="I'm Buddy! Tap two cards to find a matching pair." 
+        mood="happy"
+        showAnimation={true}
+      />
 
       <View style={styles.gameArea}>
         <View style={styles.cardsGrid}>

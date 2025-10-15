@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Dimensions, Vibration } from 'react-native';
+import { PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -21,19 +21,33 @@ export default function TracingGame() {
   const [isTracing, setIsTracing] = useState(false);
   const [completedShapes, setCompletedShapes] = useState(0);
   const [traceAccuracy, setTraceAccuracy] = useState(0);
+  const [svgLayout, setSvgLayout] = useState<{ x: number; y: number; width: number; height: number }>({ x: 0, y: 0, width: 1, height: 1 });
+  const [showDemo, setShowDemo] = useState(true);
+  const pathRef = useRef<any>(null);
+  const [pathLength, setPathLength] = useState(0);
+  const [fingerPos, setFingerPos] = useState<{ x: number; y: number } | null>(null);
+  const [dashOffset, setDashOffset] = useState(0);
+  const rafIdRef = useRef<number | null>(null);
 
-  const onGestureEvent = (event) => {
+  const onGestureEvent = (event: { nativeEvent: { x: number; y: number; }; }) => {
+    if (showDemo) return; // ignore gestures during demo
     const { x, y } = event.nativeEvent;
+    // Convert touch coordinates (relative to handler) to SVG viewBox coordinates (0-100)
+    const localX = ((x - svgLayout.x) / svgLayout.width) * 100;
+    const localY = ((y - svgLayout.y) / svgLayout.height) * 100;
     
     if (!isTracing) {
       setIsTracing(true);
-      setUserPath(`M ${x} ${y}`);
+      setUserPath(`M ${localX} ${localY}`);
+      Vibration.vibrate([0, 50]); // Start tracing haptic feedback
     } else {
-      setUserPath(prev => `${prev} L ${x} ${y}`);
+      setUserPath(prev => `${prev} L ${localX} ${localY}`);
+      Vibration.vibrate([0, 20]); // Continuous tracing haptic feedback
     }
   };
 
-  const onHandlerStateChange = (event) => {
+  const onHandlerStateChange = (event: { nativeEvent: { state: number; }; }) => {
+    if (showDemo) return;
     if (event.nativeEvent.state === 5) { // END
       setIsTracing(false);
       checkTraceAccuracy();
@@ -48,6 +62,7 @@ export default function TracingGame() {
     if (accuracy > 70) {
       const newCompleted = completedShapes + 1;
       setCompletedShapes(newCompleted);
+      Vibration.vibrate([0, 100, 50, 100]); // Success haptic feedback
       
       setTimeout(() => {
         if (newCompleted >= SHAPES.length) {
@@ -69,6 +84,7 @@ export default function TracingGame() {
         }
       }, 1000);
     } else {
+      Vibration.vibrate([0, 200]); // Error haptic feedback
       Alert.alert('Try Again! 💪', 'Trace more carefully along the dotted line!', [
         { text: 'Retry', onPress: resetCurrentShape }
       ]);
@@ -78,6 +94,7 @@ export default function TracingGame() {
   const nextShape = () => {
     setCurrentShape((currentShape + 1) % SHAPES.length);
     resetCurrentShape();
+    setShowDemo(true);
   };
 
   const resetCurrentShape = () => {
@@ -90,9 +107,51 @@ export default function TracingGame() {
     setCurrentShape(0);
     setCompletedShapes(0);
     resetCurrentShape();
+    setShowDemo(true);
   };
 
+  useEffect(() => {
+    if (!showDemo) return;
+    // ensure we have a path length
+    try {
+      if (pathRef.current && typeof pathRef.current.getTotalLength === 'function') {
+        const len = pathRef.current.getTotalLength();
+        if (len && len !== pathLength) setPathLength(len);
+      }
+    } catch {}
+    const start = Date.now();
+    const durationMs = 2000;
+    const animate = () => {
+      const elapsed = (Date.now() - start) % durationMs;
+      const t = elapsed / durationMs; // 0..1
+      setDashOffset(t * 12);
+      if (pathRef.current && pathLength) {
+        try {
+          const l = t * pathLength;
+          const p = pathRef.current.getPointAtLength(l);
+          if (p && typeof p.x === 'number' && typeof p.y === 'number') {
+            setFingerPos({ x: p.x, y: p.y });
+          }
+        } catch {}
+      }
+      rafIdRef.current = requestAnimationFrame(animate);
+    };
+    rafIdRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    };
+  }, [showDemo, pathLength, currentShape]);
+
+  useEffect(() => {
+    if (!showDemo) setFingerPos(null);
+  }, [showDemo]);
+
+  const startPoint = SHAPES[currentShape].points?.[0] || [50, 20];
+  const svgSize = Math.min(Math.round(Dimensions.get('window').width - 60), 400);
+
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <LinearGradient colors={['#A8E6CF', '#88D8A3']} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -104,7 +163,11 @@ export default function TracingGame() {
         </View>
       </View>
 
-      <Buddy message="I'm Buddy! Start from the green dot and trace along the dotted line." />
+      <Buddy 
+        message="I'm Buddy! Start from the green dot and trace along the dotted line." 
+        mood="encouraging"
+        showAnimation={true}
+      />
 
       <View style={styles.shapeContainer}>
         <Text style={styles.shapeName}>Trace the {SHAPES[currentShape].name}!</Text>
@@ -112,29 +175,54 @@ export default function TracingGame() {
         <PanGestureHandler
           onGestureEvent={onGestureEvent}
           onHandlerStateChange={onHandlerStateChange}
+          minDist={1}
+          shouldCancelWhenOutside={false}
         >
           <View style={styles.tracingArea}>
-            <Svg height="200" width="200" viewBox="0 0 100 100">
+            <Svg
+              height={svgSize}
+              width={svgSize}
+              viewBox="0 0 100 100"
+              onLayout={(e) => setSvgLayout(e.nativeEvent.layout)}
+            >
               {/* Target shape (dotted outline) */}
               <Path
+                ref={pathRef}
                 d={SHAPES[currentShape].path}
                 stroke="#666"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeDasharray="5,5"
                 fill="none"
               />
+
+              {/* Demo animated stroke (visible only during demo) */}
+              {showDemo && (
+                <Path
+                  d={SHAPES[currentShape].path}
+                  stroke="#4ECDC4"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeDasharray="6,6"
+                  strokeDashoffset={dashOffset}
+                />
+              )}
+
+              {/* Demo finger following the path */}
+              {showDemo && fingerPos && (
+                <Circle cx={String(fingerPos.x)} cy={String(fingerPos.y)} r="3.5" fill="#333" />
+              )}
               
               {/* User's trace */}
               <Path
                 d={userPath}
                 stroke="#FF6B6B"
-                strokeWidth="3"
+                strokeWidth="4"
                 fill="none"
                 strokeLinecap="round"
               />
               
               {/* Starting point indicator */}
-              <Circle cx="50" cy="20" r="3" fill="#4ECDC4" />
+              <Circle cx={String(startPoint[0])} cy={String(startPoint[1])} r="4" fill="#4ECDC4" />
             </Svg>
           </View>
         </PanGestureHandler>
@@ -151,17 +239,27 @@ export default function TracingGame() {
 
       <View style={styles.mascotContainer}>
         <Text style={styles.mascotText}>
-          {!isTracing ? "Start from the green dot and trace the dotted line! ✨" : 
-           "Keep tracing! You're doing great! 🎨"}
+          {showDemo
+            ? "Watch the demo, then tap Start Tracing. ✨"
+            : (!isTracing ? "Start from the green dot and trace the dotted line! ✨" : "Keep tracing! You're doing great! 🎨")}
         </Text>
       </View>
 
-      <TouchableOpacity style={styles.resetButton} onPress={resetCurrentShape}>
-        <LinearGradient colors={['#FFD93D', '#FF6B6B']} style={styles.buttonGradient}>
-          <Text style={styles.buttonText}>🔄 Try Again</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+      {showDemo ? (
+        <TouchableOpacity style={styles.resetButton} onPress={() => { setShowDemo(false); resetCurrentShape(); }}>
+          <LinearGradient colors={['#4ECDC4', '#44A08D']} style={styles.buttonGradient}>
+            <Text style={styles.buttonText}>▶️ Start Tracing</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.resetButton} onPress={resetCurrentShape}>
+          <LinearGradient colors={['#FFD93D', '#FF6B6B']} style={styles.buttonGradient}>
+            <Text style={styles.buttonText}>🔄 Try Again</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
     </LinearGradient>
+    </GestureHandlerRootView>
   );
 }
 

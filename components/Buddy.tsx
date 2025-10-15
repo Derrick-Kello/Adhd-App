@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import * as Speech from 'expo-speech';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '../src/store/gameStore';
@@ -7,19 +7,38 @@ import { useGameStore } from '../src/store/gameStore';
 export type BuddyProps = {
   message: string;
   autoSpeak?: boolean;
+  mood?: 'happy' | 'excited' | 'calm' | 'encouraging' | 'celebrating';
+  showAnimation?: boolean;
 };
 
-export default function Buddy({ message, autoSpeak = true }: BuddyProps) {
-  const { soundEnabled } = useGameStore();
+const BUDDY_MOODS = {
+  happy: { emoji: '😊', color: ['#4ECDC4', '#44A08D'] },
+  excited: { emoji: '🤩', color: ['#FFD93D', '#FF6B6B'] },
+  calm: { emoji: '😌', color: ['#96CEB4', '#85C1A3'] },
+  encouraging: { emoji: '💪', color: ['#667eea', '#764ba2'] },
+  celebrating: { emoji: '🎉', color: ['#FF9A9E', '#FECFEF'] },
+};
+
+export default function Buddy({ message, autoSpeak = true, mood = 'happy', showAnimation = true }: BuddyProps) {
+  const { soundEnabled, stats } = useGameStore();
   const lastMessageRef = useRef<string>('');
+  const [bounceAnim] = useState(new Animated.Value(1));
+  const [pulseAnim] = useState(new Animated.Value(1));
+
+  const currentMood = BUDDY_MOODS[mood];
 
   const speak = () => {
     if (!soundEnabled) return;
     Speech.stop();
+    
+    // Adjust speech based on mood
+    const pitch = mood === 'excited' ? 1.2 : mood === 'calm' ? 0.8 : 1.0;
+    const rate = mood === 'excited' ? 1.1 : mood === 'calm' ? 0.9 : 1.0;
+    
     Speech.speak(message, {
       language: 'en-US',
-      pitch: 1.0,
-      rate: 1.0,
+      pitch: pitch,
+      rate: rate,
       onDone: () => {},
     });
   };
@@ -34,13 +53,61 @@ export default function Buddy({ message, autoSpeak = true }: BuddyProps) {
     };
   }, [message, autoSpeak, soundEnabled]);
 
+  useEffect(() => {
+    if (showAnimation) {
+      // Bounce animation
+      const bounce = Animated.sequence([
+        Animated.spring(bounceAnim, { toValue: 1.1, useNativeDriver: true }),
+        Animated.spring(bounceAnim, { toValue: 1, useNativeDriver: true }),
+      ]);
+      
+      // Pulse animation for excited mood
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.05, duration: 1000, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
+        ])
+      );
+
+      bounce.start();
+      if (mood === 'excited' || mood === 'celebrating') {
+        pulse.start();
+      }
+
+      return () => {
+        bounce.stop();
+        pulse.stop();
+      };
+    }
+  }, [message, mood, showAnimation]);
+
+  const getPersonalizedMessage = () => {
+    // Add personalized touches based on user stats
+    if (stats.gamesPlayed > 10) {
+      return `🌟 ${message} (You're doing amazing!)`;
+    } else if (stats.totalStars > 50) {
+      return `⭐ ${message} (Look at all those stars!)`;
+    }
+    return message;
+  };
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
-        <View style={styles.avatar}><Text style={styles.avatarEmoji}>🤖</Text></View>
-        <LinearGradient colors={["#FFFFFF", "#F5F5F5"]} style={styles.bubble}>
+        <Animated.View style={[
+          styles.avatar, 
+          { 
+            transform: [
+              { scale: bounceAnim },
+              { scale: pulseAnim }
+            ]
+          }
+        ]}>
+          <Text style={styles.avatarEmoji}>{currentMood.emoji}</Text>
+        </Animated.View>
+        <LinearGradient colors={currentMood.color} style={styles.bubble}>
           <Text style={styles.name}>Buddy</Text>
-          <Text style={styles.text}>{message}</Text>
+          <Text style={styles.text}>{getPersonalizedMessage()}</Text>
           <View style={styles.actions}>
             <TouchableOpacity onPress={speak} style={styles.actionBtn}>
               <Text style={styles.actionText}>🔊</Text>

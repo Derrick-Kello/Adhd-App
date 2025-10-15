@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGameStore } from '../src/store/gameStore';
 import Buddy from '../components/Buddy';
+import FocusMode from '../components/FocusMode';
+import MoodTracker from '../components/MoodTracker';
 
 type GameCardProps = {
   title: string;
@@ -14,8 +16,10 @@ type GameCardProps = {
 };
 
 export default function HomeScreen() {
-  const { stats, avatar, lastMovementBreak } = useGameStore();
+  const { stats, avatar, lastMovementBreak, focusSessions, totalFocusTime, currentMood, dailyStreak, updateDailyStreak } = useGameStore();
   const [bounceAnim] = useState(new Animated.Value(1));
+  const [showFocusMode, setShowFocusMode] = useState(false);
+  const [showMoodTracker, setShowMoodTracker] = useState(false);
 
   const shouldShowMovementBreak = () => {
     return stats.gamesPlayed > 0 && (stats.gamesPlayed % 3 === 0) && 
@@ -31,6 +35,11 @@ export default function HomeScreen() {
   useEffect(() => {
     const interval = setInterval(startBounceAnimation, 3000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Update daily streak when component mounts
+    updateDailyStreak();
   }, []);
 
   const GameCard = ({ title, emoji, description, route, color }: GameCardProps) => (
@@ -66,15 +75,41 @@ export default function HomeScreen() {
                 <Text style={styles.statLabel}>📈 Level</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{stats.badges.length}</Text>
-                <Text style={styles.statLabel}>🏆 Badges</Text>
+                <Text style={styles.statNumber}>{dailyStreak}</Text>
+                <Text style={styles.statLabel}>🔥 Streak</Text>
               </View>
+            </View>
+            <View style={styles.additionalStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{focusSessions}</Text>
+                <Text style={styles.statLabel}>🎯 Focus</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{Math.floor(totalFocusTime / 60)}m</Text>
+                <Text style={styles.statLabel}>⏱️ Time</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.moodButton}
+                onPress={() => setShowMoodTracker(true)}
+              >
+                <Text style={styles.moodEmoji}>
+                  {currentMood === 'happy' ? '😊' : 
+                   currentMood === 'calm' ? '😌' : 
+                   currentMood === 'frustrated' ? '😤' : 
+                   currentMood === 'excited' ? '🤩' : '😴'}
+                </Text>
+                <Text style={styles.moodLabel}>Mood</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
 
         {/* Buddy Assistant */}
-        <Buddy message="Hi, I'm Buddy! What would you like to do today?" />
+        <Buddy 
+          message="Hi, I'm Buddy! What would you like to do today?" 
+          mood="happy"
+          showAnimation={true}
+        />
 
         {/* Movement Break Alert */}
         {shouldShowMovementBreak() && (
@@ -90,6 +125,20 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
         )}
+
+        {/* Focus Mode Button */}
+        <View style={styles.focusSection}>
+          <TouchableOpacity 
+            style={styles.focusButton}
+            onPress={() => setShowFocusMode(true)}
+          >
+            <LinearGradient colors={['#667eea', '#764ba2']} style={styles.focusGradient}>
+              <Text style={styles.focusEmoji}>🎯</Text>
+              <Text style={styles.focusTitle}>Focus</Text>
+              <Text style={styles.focusDescription}>Focus without distractions!</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
         {/* Games Section */}
         <View style={styles.gamesSection}>
@@ -117,6 +166,20 @@ export default function HomeScreen() {
               route="/games/tapping"
               color={['#FFD93D', '#FF6B6B']}
             />
+            <GameCard
+              title="Plan Your Day"
+              emoji="📋"
+              description="Organize your tasks!"
+              route="/games/planning"
+              color={['#FFE066', '#FFB84D']}
+            />
+            <GameCard
+              title="Breathe & Relax"
+              emoji="🌬️"
+              description="Calm breathing exercises!"
+              route="/games/breathing"
+              color={['#4ECDC4', '#44A08D']}
+            />
           </View>
         </View>
 
@@ -143,6 +206,25 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Focus Mode Modal */}
+      <FocusMode
+        visible={showFocusMode}
+        onClose={() => setShowFocusMode(false)}
+        onStart={(duration) => {
+          setShowFocusMode(false);
+          // Handle focus session start
+        }}
+      />
+
+      {/* Mood Tracker Modal */}
+      <MoodTracker
+        visible={showMoodTracker}
+        onClose={() => setShowMoodTracker(false)}
+        onMoodSelected={(mood) => {
+          console.log('Mood selected:', mood);
+        }}
+      />
     </LinearGradient>
   );
 }
@@ -181,9 +263,30 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  additionalStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   statItem: {
     alignItems: 'center',
+  },
+  moodButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 15,
+  },
+  moodEmoji: {
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  moodLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
   },
   statNumber: {
     fontSize: 20,
@@ -216,6 +319,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  focusSection: {
+    padding: 20,
+  },
+  focusButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  focusGradient: {
+    padding: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  focusEmoji: {
+    fontSize: 30,
+    marginRight: 15,
+  },
+  focusTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  focusDescription: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
   },
   gamesSection: {
     padding: 20,

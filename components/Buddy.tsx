@@ -35,12 +35,23 @@ export default function Buddy({ message, autoSpeak = true, mood = 'happy', showA
     const pitch = mood === 'excited' ? 1.2 : mood === 'calm' ? 0.8 : 1.0;
     const rate = mood === 'excited' ? 1.1 : mood === 'calm' ? 0.9 : 1.0;
     
-    Speech.speak(message, {
+    const speechOptions = {
       language: 'en-US',
       pitch: pitch,
       rate: rate,
       onDone: () => {},
-    });
+      onError: (error) => {
+        console.log('Speech error:', error);
+        // Fallback to basic settings if enhanced options fail
+        Speech.speak(message, {
+          language: 'en-US',
+          pitch: 1.1,
+          rate: 0.9,
+        });
+      },
+    };
+    
+    Speech.speak(message, speechOptions);
   };
 
   useEffect(() => {
@@ -105,15 +116,27 @@ export default function Buddy({ message, autoSpeak = true, mood = 'happy', showA
         ]}>
           <Text style={styles.avatarEmoji}>{currentMood.emoji}</Text>
         </Animated.View>
-        <LinearGradient colors={currentMood.color} style={styles.bubble}>
+        <LinearGradient colors={currentMood.color as const} style={styles.bubble}>
           <Text style={styles.name}>Buddy</Text>
           <Text style={styles.text}>{getPersonalizedMessage()}</Text>
           <View style={styles.actions}>
-            <TouchableOpacity onPress={speak} style={styles.actionBtn}>
-              <Text style={styles.actionText}>🔊</Text>
+            <TouchableOpacity 
+              onPress={speak} 
+              style={[styles.actionBtn, styles.speakBtn]}
+              activeOpacity={0.7}
+            >
+              <LinearGradient colors={['#4ECDC4', '#44A08D'] as const} style={styles.actionBtnGradient}>
+                <Text style={styles.actionText}>🔊 Play</Text>
+              </LinearGradient>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => Speech.stop()} style={styles.actionBtn}>
-              <Text style={styles.actionText}>⏹</Text>
+            <TouchableOpacity 
+              onPress={() => Speech.stop()} 
+              style={[styles.actionBtn, styles.stopBtn]}
+              activeOpacity={0.7}
+            >
+              <LinearGradient colors={['#FF6B6B', '#FF8E53'] as const} style={styles.actionBtnGradient}>
+                <Text style={styles.actionText}>⏹ Stop</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -123,42 +146,100 @@ export default function Buddy({ message, autoSpeak = true, mood = 'happy', showA
 }
 
 const styles = StyleSheet.create({
-  wrapper: { paddingHorizontal: 16, marginTop: 8, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'flex-start' },
+  wrapper: { 
+    paddingHorizontal: 16, 
+    marginTop: 12, 
+    marginBottom: 12 
+  },
+  row: { 
+    flexDirection: 'row', 
+    alignItems: 'flex-start' 
+  },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'white',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  avatarEmoji: { 
+    fontSize: 26,
+    textShadowColor: 'rgba(255,255,255,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  bubble: {
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    maxWidth: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(78, 205, 196, 0.1)',
+  },
+  nameContainer: {
+    marginBottom: 8,
+  },
+  name: { 
+    fontWeight: '800', 
+    color: '#2C3E50', 
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 11,
+    color: '#7F8C8D',
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  text: { 
+    color: '#34495E',
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  actions: { 
+    flexDirection: 'row', 
+    gap: 10, 
+    marginTop: 8,
+    justifyContent: 'flex-start',
+  },
+  actionBtn: {
+    borderRadius: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 3,
   },
-  avatarEmoji: { fontSize: 24 },
-  bubble: {
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    maxWidth: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+  actionBtnGradient: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  name: { fontWeight: '700', color: '#444', marginBottom: 2 },
-  text: { color: '#333' },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  actionBtn: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+  speakBtn: {
+    minWidth: 70,
   },
-  actionText: { fontSize: 14 },
+  stopBtn: {
+    minWidth: 70,
+  },
+  actionText: { 
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'white',
+    textAlign: 'center',
+  },
 });

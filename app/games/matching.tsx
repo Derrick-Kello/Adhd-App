@@ -7,14 +7,21 @@ import Buddy from '../../components/Buddy';
 
 const CARD_EMOJIS = ['🐶', '🐱', '🦊', '🐼', '🐸', '🦋', '🌟', '🎈'];
 
+type Card = {
+  id: number;
+  emoji: string;
+  flipped: boolean;
+  matched: boolean;
+};
+
 export default function MatchingGame() {
   const { addStars, completeGame, difficulty } = useGameStore();
-  const [cards, setCards] = useState([]);
-  const [flippedCards, setFlippedCards] = useState([]);
-  const [matchedPairs, setMatchedPairs] = useState([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [flippedCards, setFlippedCards] = useState<number[]>([]);
+  const [matchedPairs, setMatchedPairs] = useState<number[][]>([]);
   const [moves, setMoves] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
-  const [flipAnimations, setFlipAnimations] = useState({});
+  const [flipAnimations, setFlipAnimations] = useState<Record<number, Animated.Value>>({});
 
   const cardCount = difficulty === 'easy' ? 6 : difficulty === 'medium' ? 8 : 12;
 
@@ -35,14 +42,14 @@ export default function MatchingGame() {
     setGameStarted(false);
     
     // Initialize flip animations
-    const animations = {};
+    const animations: Record<number, Animated.Value> = {};
     gameCards.forEach(card => {
       animations[card.id] = new Animated.Value(0);
     });
     setFlipAnimations(animations);
   };
 
-  const flipCard = (cardId) => {
+  const flipCard = (cardId: number) => {
     if (!gameStarted) setGameStarted(true);
     if (flippedCards.length >= 2) return;
     if (flippedCards.includes(cardId)) return;
@@ -65,7 +72,7 @@ export default function MatchingGame() {
         cards.find(card => card.id === id)
       );
 
-      if (firstCard.emoji === secondCard.emoji) {
+      if (firstCard && secondCard && firstCard.emoji === secondCard.emoji) {
         // Match found!
         Vibration.vibrate([0, 100, 50, 100]); // Success haptic feedback
         setTimeout(() => {
@@ -102,7 +109,7 @@ export default function MatchingGame() {
     }
   };
 
-  const Card = ({ card }) => {
+  const Card = ({ card }: { card: Card }) => {
     const isFlipped = flippedCards.includes(card.id) || 
                     matchedPairs.some(pair => pair.includes(card.id));
     
@@ -126,7 +133,7 @@ export default function MatchingGame() {
           ]}
         >
           <LinearGradient
-            colors={isFlipped ? ['#4ECDC4', '#44A08D'] : ['#667eea', '#764ba2']}
+            colors={isFlipped ? ['#4ECDC4', '#44A08D'] as const : ['#667eea', '#764ba2'] as const}
             style={styles.cardGradient}
           >
             <Text style={styles.cardText}>
@@ -139,7 +146,7 @@ export default function MatchingGame() {
   };
 
   return (
-    <LinearGradient colors={['#FF9A9E', '#FECFEF']} style={styles.container}>
+    <LinearGradient colors={['#FF9A9E', '#FECFEF'] as const} style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>

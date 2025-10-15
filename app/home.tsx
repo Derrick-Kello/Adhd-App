@@ -143,26 +143,27 @@ export default function HomeScreen() {
         {/* Games Section */}
         <View style={styles.gamesSection}>
           <Text style={styles.sectionTitle}>🎮 Choose Your Adventure!</Text>
+          <Text style={styles.sectionSubtitle}>Pick a game that matches how you feel today!</Text>
           
           <View style={styles.gamesGrid}>
             <GameCard
               title="Memory Match"
               emoji="🧩"
-              description="Match the cards!"
+              description="Match the cards and boost your memory!"
               route="/games/matching"
               color={['#FF9A9E', '#FECFEF']}
             />
             <GameCard
               title="Shape Tracer"
               emoji="✏️"
-              description="Trace with your finger!"
+              description="Trace shapes to improve focus!"
               route="/games/tracing"
               color={['#A8E6CF', '#88D8A3']}
             />
             <GameCard
               title="Quick Tap"
               emoji="⚡"
-              description="Tap the right colors!"
+              description="Test your super-fast reflexes!"
               route="/games/tapping"
               color={['#FFD93D', '#FF6B6B']}
             />
@@ -356,8 +357,15 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 20,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontStyle: 'italic',
   },
   gamesGrid: {
     gap: 15,

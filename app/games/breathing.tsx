@@ -8,10 +8,10 @@ import Buddy from '../../components/Buddy';
 type BreathingPhase = 'inhale' | 'hold' | 'exhale' | 'rest';
 
 const BREATHING_PATTERNS = [
-  { name: 'Calm Down', emoji: '😌', inhale: 4, hold: 4, exhale: 6, rest: 2, color: ['#4ECDC4', '#44A08D'] },
-  { name: 'Focus', emoji: '🎯', inhale: 3, hold: 3, exhale: 3, rest: 1, color: ['#667eea', '#764ba2'] },
-  { name: 'Energy', emoji: '⚡', inhale: 2, hold: 1, exhale: 2, rest: 1, color: ['#FFD93D', '#FF6B6B'] },
-  { name: 'Sleep', emoji: '😴', inhale: 4, hold: 7, exhale: 8, rest: 0, color: ['#DDA0DD', '#C8A2C8'] },
+  { name: 'Calm Down', emoji: '😌', inhale: 4, hold: 4, exhale: 6, rest: 2, color: ['#4ECDC4', '#44A08D'] as const },
+  { name: 'Focus', emoji: '🎯', inhale: 3, hold: 3, exhale: 3, rest: 1, color: ['#667eea', '#764ba2'] as const },
+  { name: 'Energy', emoji: '⚡', inhale: 2, hold: 1, exhale: 2, rest: 1, color: ['#FFD93D', '#FF6B6B'] as const },
+  { name: 'Sleep', emoji: '😴', inhale: 4, hold: 7, exhale: 8, rest: 0, color: ['#DDA0DD', '#C8A2C8'] as const },
 ];
 
 export default function BreathingGame() {
@@ -243,7 +243,7 @@ export default function BreathingGame() {
           </View>
           
           <TouchableOpacity style={styles.startButton} onPress={startSession}>
-            <LinearGradient colors={['#4ECDC4', '#44A08D']} style={styles.buttonGradient}>
+            <LinearGradient colors={['#4ECDC4', '#44A08D'] as const} style={styles.buttonGradient}>
               <Text style={styles.buttonText}>Start Breathing! 🌬️</Text>
             </LinearGradient>
           </TouchableOpacity>
